@@ -10,9 +10,9 @@ const AIModel = lazy(() => import('./AIModel'));
 const EthicsCompliance = lazy(() => import('./EthicsCompliance'));
 
 const ErrorFallback = ({ error }) => (
-  <div className="text-red-500">
-    <h2>Something went wrong:</h2>
-    <pre>{error.message}</pre>
+  <div className="text-red-500 p-4 border border-red-500 rounded">
+    <h2 className="text-xl font-bold mb-2">Something went wrong:</h2>
+    <pre className="bg-red-100 p-2 rounded">{error.message}</pre>
   </div>
 );
 
