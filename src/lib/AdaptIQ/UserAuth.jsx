@@ -1,52 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import * as jose from 'jose';
 
 const UserAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [token, setToken] = useState('');
 
-  const secret = new TextEncoder().encode('your_secret_key');
-
-  const authenticateUser = async () => {
-    if (username === 'admin' && password === 'password') {
-      const jwt = await new jose.SignJWT({ id: 'user123', username })
-        .setProtectedHeader({ alg: 'HS256' })
-        .setExpirationTime('1h')
-        .sign(secret);
-      
-      setToken(jwt);
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      const storedUser = JSON.parse(localStorage.getItem('user'));
       setIsAuthenticated(true);
-      setUser({ id: 'user123', name: username, role: 'admin' });
+      setUser(storedUser);
+    }
+  }, []);
+
+  const authenticateUser = () => {
+    if (username === 'admin' && password === 'password') {
+      const user = { id: 'user123', name: username, role: 'admin' };
+      const token = btoa(JSON.stringify(user)); // Simple encoding, not secure for production
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setIsAuthenticated(true);
+      setUser(user);
+    } else {
+      alert('Invalid credentials');
     }
   };
 
   const logout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
     setIsAuthenticated(false);
     setUser(null);
-    setToken('');
   };
-
-  useEffect(() => {
-    const verifyToken = async () => {
-      if (token) {
-        try {
-          const { payload } = await jose.jwtVerify(token, secret);
-          setUser({ id: payload.id, name: payload.username, role: 'admin' });
-          setIsAuthenticated(true);
-        } catch (error) {
-          console.error('Invalid token');
-          logout();
-        }
-      }
-    };
-
-    verifyToken();
-  }, [token]);
 
   return (
     <div className="p-4 border rounded-lg shadow-sm">
