@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import jwt from 'jsonwebtoken';
+import * as jose from 'jose';
 
 const UserAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -10,11 +10,16 @@ const UserAuth = () => {
   const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
 
-  const authenticateUser = () => {
-    // Simulating authentication process with JWT
+  const secret = new TextEncoder().encode('your_secret_key');
+
+  const authenticateUser = async () => {
     if (username === 'admin' && password === 'password') {
-      const token = jwt.sign({ id: 'user123', username }, 'secret_key', { expiresIn: '1h' });
-      setToken(token);
+      const jwt = await new jose.SignJWT({ id: 'user123', username })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setExpirationTime('1h')
+        .sign(secret);
+      
+      setToken(jwt);
       setIsAuthenticated(true);
       setUser({ id: 'user123', name: username, role: 'admin' });
     }
@@ -27,18 +32,21 @@ const UserAuth = () => {
   };
 
   useEffect(() => {
-    // Check token validity on component mount
-    if (token) {
-      try {
-        const decoded = jwt.verify(token, 'secret_key');
-        setUser({ id: decoded.id, name: decoded.username, role: 'admin' });
-        setIsAuthenticated(true);
-      } catch (error) {
-        console.error('Invalid token');
-        logout();
+    const verifyToken = async () => {
+      if (token) {
+        try {
+          const { payload } = await jose.jwtVerify(token, secret);
+          setUser({ id: payload.id, name: payload.username, role: 'admin' });
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error('Invalid token');
+          logout();
+        }
       }
-    }
-  }, []);
+    };
+
+    verifyToken();
+  }, [token]);
 
   return (
     <div className="p-4 border rounded-lg shadow-sm">
