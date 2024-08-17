@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import CryptoJS from 'crypto-js';
@@ -18,12 +18,17 @@ const DataManager = () => {
     return bytes.toString(CryptoJS.enc.Utf8);
   };
 
+  const generateHMAC = (data) => {
+    return CryptoJS.HmacSHA256(data, secretKey).toString();
+  };
+
   const storeData = () => {
     if (userId && data) {
       const encryptedData = encryptData(data);
+      const hmac = generateHMAC(data);
       setDataStore(prevStore => ({
         ...prevStore,
-        [userId]: encryptedData
+        [userId]: { data: encryptedData, hmac }
       }));
       setUserId('');
       setData('');
@@ -31,8 +36,28 @@ const DataManager = () => {
   };
 
   const retrieveData = (id) => {
-    return dataStore[id] ? decryptData(dataStore[id]) : 'No data found';
+    if (dataStore[id]) {
+      const decryptedData = decryptData(dataStore[id].data);
+      const hmac = generateHMAC(decryptedData);
+      if (hmac === dataStore[id].hmac) {
+        return decryptedData;
+      } else {
+        return 'Data integrity check failed';
+      }
+    }
+    return 'No data found';
   };
+
+  useEffect(() => {
+    const storedData = localStorage.getItem('encryptedDataStore');
+    if (storedData) {
+      setDataStore(JSON.parse(storedData));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('encryptedDataStore', JSON.stringify(dataStore));
+  }, [dataStore]);
 
   return (
     <div className="p-4 border rounded-lg shadow-sm">

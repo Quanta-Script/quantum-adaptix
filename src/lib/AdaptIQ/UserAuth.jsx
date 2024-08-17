@@ -11,12 +11,12 @@ const UserAuth = () => {
   const [token, setToken] = useState('');
 
   const authenticateUser = () => {
-    // Simulating authentication process with JWT
     if (username === 'admin' && password === 'password') {
       const token = jwt.sign({ id: 'user123', username }, 'secret_key', { expiresIn: '1h' });
       setToken(token);
       setIsAuthenticated(true);
       setUser({ id: 'user123', name: username, role: 'admin' });
+      localStorage.setItem('authToken', token);
     }
   };
 
@@ -24,20 +24,41 @@ const UserAuth = () => {
     setIsAuthenticated(false);
     setUser(null);
     setToken('');
+    localStorage.removeItem('authToken');
+  };
+
+  const refreshToken = () => {
+    const currentToken = localStorage.getItem('authToken');
+    if (currentToken) {
+      try {
+        const decoded = jwt.verify(currentToken, 'secret_key');
+        const newToken = jwt.sign({ id: decoded.id, username: decoded.username }, 'secret_key', { expiresIn: '1h' });
+        setToken(newToken);
+        localStorage.setItem('authToken', newToken);
+      } catch (error) {
+        console.error('Invalid token, logging out');
+        logout();
+      }
+    }
   };
 
   useEffect(() => {
-    // Check token validity on component mount
-    if (token) {
+    const storedToken = localStorage.getItem('authToken');
+    if (storedToken) {
       try {
-        const decoded = jwt.verify(token, 'secret_key');
+        const decoded = jwt.verify(storedToken, 'secret_key');
         setUser({ id: decoded.id, name: decoded.username, role: 'admin' });
         setIsAuthenticated(true);
+        setToken(storedToken);
       } catch (error) {
         console.error('Invalid token');
         logout();
       }
     }
+
+    const tokenRefreshInterval = setInterval(refreshToken, 30 * 60 * 1000); // Refresh every 30 minutes
+
+    return () => clearInterval(tokenRefreshInterval);
   }, []);
 
   return (
@@ -66,7 +87,7 @@ const UserAuth = () => {
           <p>Welcome, {user.name}!</p>
           <p>User ID: {user.id}</p>
           <p>Role: {user.role}</p>
-          <Button onClick={logout}>Logout</Button>
+          <Button onClick={logout} className="mt-2">Logout</Button>
         </div>
       )}
     </div>

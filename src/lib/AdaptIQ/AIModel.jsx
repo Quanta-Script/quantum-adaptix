@@ -9,26 +9,29 @@ const AIModel = () => {
   const [model, setModel] = useState(null);
 
   useEffect(() => {
-    // Initialize a simple TensorFlow.js model for text classification
     const initModel = async () => {
       const m = tf.sequential();
       m.add(tf.layers.dense({ units: 16, inputShape: [10], activation: 'relu' }));
-      m.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
-      m.compile({ optimizer: 'adam', loss: 'binaryCrossentropy', metrics: ['accuracy'] });
+      m.add(tf.layers.dense({ units: 3, activation: 'softmax' }));
+      m.compile({ optimizer: 'adam', loss: 'categoricalCrossentropy', metrics: ['accuracy'] });
       setModel(m);
     };
     initModel();
   }, []);
 
+  const preprocessInput = (text) => {
+    return text.split('').map(char => char.charCodeAt(0) / 255).slice(0, 10);
+  };
+
   const makePrediction = async () => {
     if (!model) return;
 
-    // Convert input text to a simple numeric representation
-    const inputTensor = tf.tensor2d([input.split('').map(char => char.charCodeAt(0) / 255).slice(0, 10)]);
-
+    const inputTensor = tf.tensor2d([preprocessInput(input)]);
     const prediction = model.predict(inputTensor);
-    const score = prediction.dataSync()[0];
-    setPrediction(`Sentiment: ${score > 0.5 ? 'Positive' : 'Negative'} (Score: ${score.toFixed(2)})`);
+    const scores = prediction.dataSync();
+    const labels = ['Negative', 'Neutral', 'Positive'];
+    const result = labels[scores.indexOf(Math.max(...scores))];
+    setPrediction(`Sentiment: ${result} (Confidence: ${Math.max(...scores).toFixed(2)})`);
   };
 
   return (
