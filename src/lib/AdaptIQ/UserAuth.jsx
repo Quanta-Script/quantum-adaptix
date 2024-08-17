@@ -8,9 +8,12 @@ const UserAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSignup, setIsSignup] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     checkAuthStatus();
@@ -44,19 +47,54 @@ const UserAuth = () => {
     return `${header}.${payload}.${signature}`;
   };
 
+  const generateVerificationCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+
   const signup = () => {
-    if (username && password) {
+    if (username && email && password) {
       const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
       if (existingUsers.some(u => u.username === username)) {
         setError('Username already exists');
         return;
       }
-      const newUser = { id: Date.now().toString(), username, password, role: 'user' };
+      if (existingUsers.some(u => u.email === email)) {
+        setError('Email already exists');
+        return;
+      }
+      const verificationCode = generateVerificationCode();
+      const newUser = { 
+        id: Date.now().toString(), 
+        username, 
+        email, 
+        password, 
+        role: 'user',
+        isVerified: false,
+        verificationCode
+      };
       existingUsers.push(newUser);
       localStorage.setItem('users', JSON.stringify(existingUsers));
-      authenticateUser(newUser);
+      setIsVerifying(true);
+      setError('');
+      // Simulate sending an email
+      console.log(`Verification code for ${email}: ${verificationCode}`);
+      alert(`A verification code has been sent to ${email}. Please check your email and enter the code to verify your account.`);
     } else {
-      setError('Please enter both username and password');
+      setError('Please enter username, email, and password');
+    }
+  };
+
+  const verifyEmail = () => {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const userIndex = users.findIndex(u => u.email === email && u.verificationCode === verificationCode);
+    if (userIndex !== -1) {
+      users[userIndex].isVerified = true;
+      localStorage.setItem('users', JSON.stringify(users));
+      setIsVerifying(false);
+      setError('');
+      alert('Email verified successfully. You can now log in.');
+    } else {
+      setError('Invalid verification code');
     }
   };
 
@@ -64,7 +102,11 @@ const UserAuth = () => {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const user = users.find(u => u.username === username && u.password === password);
     if (user) {
-      authenticateUser(user);
+      if (user.isVerified) {
+        authenticateUser(user);
+      } else {
+        setError('Please verify your email before logging in');
+      }
     } else {
       setError('Invalid credentials');
     }
@@ -88,6 +130,7 @@ const UserAuth = () => {
   const toggleSignup = () => {
     setIsSignup(!isSignup);
     setError('');
+    setIsVerifying(false);
   };
 
   return (
@@ -95,28 +138,52 @@ const UserAuth = () => {
       <h2 className="text-xl font-bold mb-4">User Authentication</h2>
       {!isAuthenticated ? (
         <div>
-          <Input
-            type="text"
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            className="mb-2"
-          />
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mb-2"
-          />
-          {isSignup ? (
-            <Button onClick={signup} className="mr-2">Sign Up</Button>
+          {!isVerifying ? (
+            <>
+              <Input
+                type="text"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="mb-2"
+              />
+              {isSignup && (
+                <Input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mb-2"
+                />
+              )}
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="mb-2"
+              />
+              {isSignup ? (
+                <Button onClick={signup} className="mr-2">Sign Up</Button>
+              ) : (
+                <Button onClick={login} className="mr-2">Login</Button>
+              )}
+              <Button onClick={toggleSignup} variant="outline">
+                {isSignup ? 'Switch to Login' : 'Switch to Sign Up'}
+              </Button>
+            </>
           ) : (
-            <Button onClick={login} className="mr-2">Login</Button>
+            <>
+              <Input
+                type="text"
+                placeholder="Verification Code"
+                value={verificationCode}
+                onChange={(e) => setVerificationCode(e.target.value)}
+                className="mb-2"
+              />
+              <Button onClick={verifyEmail} className="mr-2">Verify Email</Button>
+            </>
           )}
-          <Button onClick={toggleSignup} variant="outline">
-            {isSignup ? 'Switch to Login' : 'Switch to Sign Up'}
-          </Button>
           {error && (
             <Alert variant="destructive" className="mt-2">
               <AlertCircle className="h-4 w-4" />
@@ -129,6 +196,7 @@ const UserAuth = () => {
         <div>
           <p>Welcome, {user.username}!</p>
           <p>User ID: {user.id}</p>
+          <p>Email: {user.email}</p>
           <p>Role: {user.role}</p>
           <Button onClick={logout} className="mt-2">Logout</Button>
         </div>
