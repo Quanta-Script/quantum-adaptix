@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -7,12 +7,23 @@ const ContextManager = () => {
   const [key, setKey] = useState('');
   const [value, setValue] = useState('');
 
+  useEffect(() => {
+    // Load context from localStorage on component mount
+    const savedContext = localStorage.getItem('context');
+    if (savedContext) {
+      setContext(JSON.parse(savedContext));
+    }
+  }, []);
+
   const updateContext = () => {
     if (key && value) {
-      setContext(prevContext => ({
-        ...prevContext,
-        [key]: value
-      }));
+      const newContext = {
+        ...context,
+        [key]: value,
+        timestamp: new Date().toISOString(),
+      };
+      setContext(newContext);
+      localStorage.setItem('context', JSON.stringify(newContext));
       setKey('');
       setValue('');
     }

@@ -7,9 +7,13 @@ const QuantumSimulator = () => {
   const [output, setOutput] = useState('');
 
   const simulateQuantumProcessing = () => {
-    // This is a very simplified simulation of quantum processing
-    const processedData = input.split('').reverse().join('');
-    setOutput(processedData);
+    // Simulating a basic quantum superposition
+    const superposition = input.split('').map(char => {
+      const binary = char.charCodeAt(0).toString(2).padStart(8, '0');
+      return binary.split('').map(bit => bit === '0' ? '|0⟩' : '|1⟩').join(' + ');
+    });
+
+    setOutput(superposition.join('\n'));
   };
 
   return (
@@ -24,8 +28,10 @@ const QuantumSimulator = () => {
       <Button onClick={simulateQuantumProcessing} className="mb-2">Process</Button>
       {output && (
         <div>
-          <h3 className="font-semibold">Processed Output:</h3>
-          <p>{output}</p>
+          <h3 className="font-semibold">Simulated Quantum State:</h3>
+          <pre className="bg-gray-100 p-2 rounded whitespace-pre-wrap">
+            {output}
+          </pre>
         </div>
       )}
     </div>

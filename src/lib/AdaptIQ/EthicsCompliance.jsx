@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -6,15 +6,30 @@ const EthicsCompliance = () => {
   const [action, setAction] = useState('');
   const [complianceLog, setComplianceLog] = useState([]);
 
+  useEffect(() => {
+    // Load compliance log from localStorage on component mount
+    const savedLog = localStorage.getItem('complianceLog');
+    if (savedLog) {
+      setComplianceLog(JSON.parse(savedLog));
+    }
+  }, []);
+
   const checkCompliance = () => {
-    const isCompliant = !action.toLowerCase().includes('confidential');
+    const isCompliant = !action.toLowerCase().includes('confidential') &&
+                        !action.toLowerCase().includes('private');
     const logEntry = {
       action,
       result: isCompliant ? 'Compliant' : 'Non-compliant',
       timestamp: new Date().toISOString()
     };
-    setComplianceLog(prevLog => [...prevLog, logEntry]);
+    const updatedLog = [...complianceLog, logEntry];
+    setComplianceLog(updatedLog);
+    localStorage.setItem('complianceLog', JSON.stringify(updatedLog));
     setAction('');
+
+    if (!isCompliant) {
+      alert('Warning: This action may violate ethical guidelines or privacy policies.');
+    }
   };
 
   return (
@@ -30,10 +45,10 @@ const EthicsCompliance = () => {
       </div>
       <div>
         <h3 className="font-semibold">Compliance Log:</h3>
-        <ul className="list-disc pl-5">
+        <ul className="list-disc pl-5 max-h-40 overflow-y-auto">
           {complianceLog.map((entry, index) => (
-            <li key={index}>
-              {entry.action}: {entry.result} ({entry.timestamp})
+            <li key={index} className={entry.result === 'Non-compliant' ? 'text-red-500' : 'text-green-500'}>
+              {entry.action}: {entry.result} ({new Date(entry.timestamp).toLocaleString()})
             </li>
           ))}
         </ul>

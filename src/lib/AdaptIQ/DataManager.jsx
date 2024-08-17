@@ -1,17 +1,29 @@
 import React, { useState } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import CryptoJS from 'crypto-js';
 
 const DataManager = () => {
   const [dataStore, setDataStore] = useState({});
   const [userId, setUserId] = useState('');
   const [data, setData] = useState('');
+  const secretKey = 'your-secret-key'; // In a real app, this should be securely stored
+
+  const encryptData = (data) => {
+    return CryptoJS.AES.encrypt(data, secretKey).toString();
+  };
+
+  const decryptData = (encryptedData) => {
+    const bytes = CryptoJS.AES.decrypt(encryptedData, secretKey);
+    return bytes.toString(CryptoJS.enc.Utf8);
+  };
 
   const storeData = () => {
     if (userId && data) {
+      const encryptedData = encryptData(data);
       setDataStore(prevStore => ({
         ...prevStore,
-        [userId]: btoa(data) // Simple encoding for demonstration
+        [userId]: encryptedData
       }));
       setUserId('');
       setData('');
@@ -19,7 +31,7 @@ const DataManager = () => {
   };
 
   const retrieveData = (id) => {
-    return dataStore[id] ? atob(dataStore[id]) : 'No data found';
+    return dataStore[id] ? decryptData(dataStore[id]) : 'No data found';
   };
 
   return (
