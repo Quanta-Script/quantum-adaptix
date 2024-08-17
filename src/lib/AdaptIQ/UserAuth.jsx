@@ -10,6 +10,7 @@ const UserAuth = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [isSignup, setIsSignup] = useState(false);
 
   useEffect(() => {
     checkAuthStatus();
@@ -33,19 +34,6 @@ const UserAuth = () => {
     }
   };
 
-  const authenticateUser = () => {
-    if (username === 'admin' && password === 'password') {
-      const user = { id: 'user123', name: username, role: 'admin' };
-      const token = createToken(user);
-      localStorage.setItem('authToken', token);
-      setIsAuthenticated(true);
-      setUser(user);
-      setError('');
-    } else {
-      setError('Invalid credentials');
-    }
-  };
-
   const createToken = (user) => {
     const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
     const payload = btoa(JSON.stringify({
@@ -56,10 +44,49 @@ const UserAuth = () => {
     return `${header}.${payload}.${signature}`;
   };
 
+  const signup = () => {
+    if (username && password) {
+      const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+      if (existingUsers.some(u => u.username === username)) {
+        setError('Username already exists');
+        return;
+      }
+      const newUser = { id: Date.now().toString(), username, password, role: 'user' };
+      existingUsers.push(newUser);
+      localStorage.setItem('users', JSON.stringify(existingUsers));
+      authenticateUser(newUser);
+    } else {
+      setError('Please enter both username and password');
+    }
+  };
+
+  const login = () => {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const user = users.find(u => u.username === username && u.password === password);
+    if (user) {
+      authenticateUser(user);
+    } else {
+      setError('Invalid credentials');
+    }
+  };
+
+  const authenticateUser = (user) => {
+    const token = createToken(user);
+    localStorage.setItem('authToken', token);
+    setIsAuthenticated(true);
+    setUser(user);
+    setError('');
+  };
+
   const logout = () => {
     localStorage.removeItem('authToken');
     setIsAuthenticated(false);
     setUser(null);
+    setError('');
+  };
+
+  const toggleSignup = () => {
+    setIsSignup(!isSignup);
     setError('');
   };
 
@@ -82,7 +109,14 @@ const UserAuth = () => {
             onChange={(e) => setPassword(e.target.value)}
             className="mb-2"
           />
-          <Button onClick={authenticateUser}>Authenticate</Button>
+          {isSignup ? (
+            <Button onClick={signup} className="mr-2">Sign Up</Button>
+          ) : (
+            <Button onClick={login} className="mr-2">Login</Button>
+          )}
+          <Button onClick={toggleSignup} variant="outline">
+            {isSignup ? 'Switch to Login' : 'Switch to Sign Up'}
+          </Button>
           {error && (
             <Alert variant="destructive" className="mt-2">
               <AlertCircle className="h-4 w-4" />
@@ -93,7 +127,7 @@ const UserAuth = () => {
         </div>
       ) : (
         <div>
-          <p>Welcome, {user.name}!</p>
+          <p>Welcome, {user.username}!</p>
           <p>User ID: {user.id}</p>
           <p>Role: {user.role}</p>
           <Button onClick={logout} className="mt-2">Logout</Button>
